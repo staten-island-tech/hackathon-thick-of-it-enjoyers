@@ -51,9 +51,12 @@ def create_falling_blocks():
 
 # Function to restart the game
 def restart_game():
-    global char_x, char_y
+    global char_x, char_y, char_width, char_height
     char_x, char_y = screen_width // 2, screen_height - 120
-    return create_falling_blocks()
+    # Reset character size to default values
+    char_width, char_height = 50, 50
+    blocks = create_falling_blocks()  # Ensure blocks are created anew
+    return blocks
 
 # Home screen loop
 def home_screen():
@@ -91,6 +94,11 @@ def home_screen():
             input_display_text = font.render(input_text, True, BLACK)
             screen.blit(input_display_text, (input_box.x + 5, input_box.y + 5))
 
+        # Display the RGB value of the current character color
+        color_text = f"RGB: {CHARACTER_COLOR}"
+        color_text_surface = font.render(color_text, True, BLACK)
+        screen.blit(color_text_surface, (screen_width // 2 - color_text_surface.get_width() // 2, screen_height - 100))
+
         # Listen for events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -119,28 +127,16 @@ def home_screen():
                     input_text = ''
                 elif event.key == pygame.K_c:  # Customize character
                     CHARACTER_COLOR = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-                    char_width = random.randint(40, 100)
-                    char_height = random.randint(40, 100)
                 elif event.key == pygame.K_BACKSPACE:
                     input_text = input_text[:-1]  # Remove last character
                 else:
                     # Only allow numbers and limited characters for input
                     if event.unicode.isdigit():
                         input_text += event.unicode
-# Display the RGB value of the current character color
-        color_text = f"RGB: {CHARACTER_COLOR}"
-        color_text_surface = font.render(color_text, True, BLACK)
-        screen.blit(color_text_surface, (WIDTH // 2 - color_text_surface.get_width() // 2, HEIGHT // 2 + char_height // 2 + 20))
-
-    # If the prompt is active, display the input box
-    if prompt_active:
-        input_surface = font.render(input_text, True, BLACK)
-        screen.blit(input_surface, (WIDTH // 2 - input_surface.get_width() // 2, HEIGHT // 2 - 100))
 
         pygame.display.flip()
-        pygame.time.Clock().tick(60)
 
-# Main game loop
+# Main game loop with invincibility period
 def game_loop():
     global char_x, char_y, char_width, char_height, CHARACTER_COLOR, falling_speed
 
@@ -148,8 +144,12 @@ def game_loop():
     clock = pygame.time.Clock()
     running = True
 
+    # Start invincibility period (e.g., 3 seconds)
+    invincibility_time = 3000  # Invincibility lasts for 3000 ms (3 seconds)
+    invincibility_start_time = pygame.time.get_ticks()  # Get the current time in milliseconds
+
     while running:
-        screen.fill(BLUE)  # Fill the screen with blue
+        screen.fill(WHITE)  # Fill the screen with white
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -175,17 +175,22 @@ def game_loop():
 
         blocks = new_blocks
 
-        # Check for collisions (if character touches a block)
-        for block in blocks:
-            block_rect = pygame.Rect(block)
-            char_rect = pygame.Rect(char_x, char_y, char_width, char_height)
-            if char_rect.colliderect(block_rect):
-                # If collision occurs, restart the game
-                return 'restart'
+        # Check if invincibility period is over
+        current_time = pygame.time.get_ticks()
+        invincible = current_time - invincibility_start_time < invincibility_time
+
+        # If not invincible, check for collisions
+        if not invincible:
+            for block in blocks:
+                block_rect = pygame.Rect(block)
+                char_rect = pygame.Rect(char_x, char_y, char_width, char_height)
+                if char_rect.colliderect(block_rect):
+                    # If collision occurs, restart the game
+                    return 'restart'
 
         # Draw the falling blocks
         for block in blocks:
-            pygame.draw.rect(screen, RED, block)
+            pygame.draw.rect(screen, BLACK, block)
 
         # Draw the character
         pygame.draw.rect(screen, CHARACTER_COLOR, (char_x, char_y, char_width, char_height))
@@ -193,6 +198,16 @@ def game_loop():
         # Display message
         game_over_text = font.render("Avoid the blocks!", True, WHITE)
         screen.blit(game_over_text, (10, 10))
+
+        # Display invincibility warning if active
+        if invincible:
+            invincibility_text = font.render("Invincible!", True, RED)
+            screen.blit(invincibility_text, (screen_width // 2 - invincibility_text.get_width() // 2, screen_height // 2 - 50))
+
+        # Display the RGB value of the current character color
+        color_text = f"Character Color (RGB): {CHARACTER_COLOR}"
+        color_text_surface = font.render(color_text, True, BLACK)
+        screen.blit(color_text_surface, (screen_width // 2 - color_text_surface.get_width() // 2, screen_height - 100))
 
         pygame.display.flip()
 
