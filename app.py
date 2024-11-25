@@ -17,6 +17,7 @@ GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
 YELLOW = (255, 255, 0)
 BLACK = (0, 0, 0)
+GRAY = (120, 120, 120)
 CHARACTER_COLOR = BLACK
 
 # Define the grid dimensions
@@ -70,19 +71,22 @@ def home_screen():
         screen.fill(WHITE)
         # Draw title
         title_text = font.render("Falling Blocks Game", True, BLACK)
-        screen.blit(title_text, (screen_width // 2 - title_text.get_width() // 2, 50))
+        screen.blit(title_text, (screen_width // 2 - title_text.get_width() // 2, 10))
 
         # Draw instructions
         instructions_text = font.render("Press Enter to Start", True, BLACK)
         screen.blit(instructions_text, (screen_width // 2 - instructions_text.get_width() // 2, 150))
 
         # Draw speed option
-        speed_text = font.render(f"Speed: {falling_speed}", True, BLACK)
+        speed_text = font.render(f"Press S to change Speed: {falling_speed}", True, BLACK)
         screen.blit(speed_text, (screen_width // 2 - speed_text.get_width() // 2, 200))
 
         # Character Customization
         customization_text = font.render("Press C to Customize Character", True, BLACK)
         screen.blit(customization_text, (screen_width // 2 - customization_text.get_width() // 2, 250))
+
+        instructions_text = font.render("Hold SPACE to Accelerate", True, BLACK)
+        screen.blit(instructions_text, (screen_width // 2 - instructions_text.get_width() // 2, 100))
 
         # If prompt is active, display input box
         if prompt_active:
@@ -98,6 +102,11 @@ def home_screen():
         color_text = f"RGB: {CHARACTER_COLOR}"
         color_text_surface = font.render(color_text, True, BLACK)
         screen.blit(color_text_surface, (screen_width // 2 - color_text_surface.get_width() // 2, screen_height - 100))
+
+        char_x = screen_width // 2 - char_width // 2  # Center horizontally
+        char_y = screen_height // 2 - char_height + 180  # Center vertically
+        pygame.draw.rect(screen, CHARACTER_COLOR, (char_x, char_y, char_width, char_height))
+
 
         # Listen for events
         for event in pygame.event.get():
@@ -148,6 +157,16 @@ def game_loop():
     invincibility_time = 3000  # Invincibility lasts for 3000 ms (3 seconds)
     invincibility_start_time = pygame.time.get_ticks()  # Get the current time in milliseconds
 
+    # Initialize the score
+    score = 0
+
+    normal_speed = 5  # Default speed for the character
+    accelerated_speed = 12  # Speed when accelerate button is pressed
+    char_speed = normal_speed  # Start with normal speed
+
+    # Set font for text on blocks
+    block_font = pygame.font.SysFont("Arial", 20)
+
     while running:
         screen.fill(WHITE)  # Fill the screen with white
 
@@ -163,6 +182,15 @@ def game_loop():
             char_x -= char_speed
         if keys[pygame.K_d] and char_x < screen_width - char_width:
             char_x += char_speed
+        if keys[pygame.K_LEFT] and char_x > 0:
+            char_x -= char_speed
+        if keys[pygame.K_RIGHT] and char_x < screen_width - char_width:
+            char_x += char_speed
+
+        if keys[pygame.K_SPACE]:
+            char_speed = accelerated_speed  # Increase character speed  
+        else:
+            char_speed = normal_speed  # Revert to normal speed
 
         # Update falling blocks (move them down)
         new_blocks = []
@@ -171,6 +199,10 @@ def game_loop():
             if block[1] > screen_height:  # Reset the block if it goes off screen
                 block[1] = -block_height
                 block[0] = random.choice(range(columns)) * block_width
+
+                # Increase the score when the block hits the ground
+                score += 1
+
             new_blocks.append(block)
 
         blocks = new_blocks
@@ -188,30 +220,39 @@ def game_loop():
                     # If collision occurs, restart the game
                     return 'restart'
 
-        # Draw the falling blocks
+        # Draw the falling blocks with text
         for block in blocks:
-            pygame.draw.rect(screen, BLACK, block)
+            pygame.draw.rect(screen, BLACK, block)  # Draw the block (rectangle)
+
+            # Add text inside the block
+            block_rect = pygame.Rect(block)
+            text = block_font.render("♪", True, WHITE)  # Text to display in the block
+            block_font = pygame.font.SysFont("Arial", 40)
+            text_rect = text.get_rect(center=block_rect.center)  # Center the text inside the block
+            screen.blit(text, text_rect)  # Draw the text
 
         # Draw the character
         pygame.draw.rect(screen, CHARACTER_COLOR, (char_x, char_y, char_width, char_height))
 
         # Display message
-        game_over_text = font.render("Avoid the blocks!", True, WHITE)
+        game_over_text = font.render("Avoid the blocks!", True, GRAY)
         screen.blit(game_over_text, (10, 10))
 
         # Display invincibility warning if active
         if invincible:
             invincibility_text = font.render("Invincible!", True, RED)
             screen.blit(invincibility_text, (screen_width // 2 - invincibility_text.get_width() // 2, screen_height // 2 - 50))
+            score = 0
 
-        # Display the RGB value of the current character color
-        color_text = f"Character Color (RGB): {CHARACTER_COLOR}"
-        color_text_surface = font.render(color_text, True, BLACK)
-        screen.blit(color_text_surface, (screen_width // 2 - color_text_surface.get_width() // 2, screen_height - 100))
+        # Display the current score
+        score_text = font.render(f"Score: {score}", True, BLACK)
+        screen.blit(score_text, (10, screen_height - 40))  # Place score at bottom left
 
         pygame.display.flip()
 
         clock.tick(60)
+
+
 
 # Main Program Loop
 while True:
